@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f2937">
+<title>Flashcard Hán tự</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--ink:#1c1b1a;--mute:#6b6a66;--line:#e2e0d8;--acc:#c0392b;--ok:#2e7d52;--bad:#c0392b;--chip:#ecebe4}
+@media (prefers-color-scheme:dark){:root{--bg:#161616;--card:#222;--ink:#f1efe9;--mute:#9d9b94;--line:#333;--acc:#ef6b5a;--ok:#5cc08a;--bad:#ef6b5a;--chip:#2c2c2c}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+header{display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line);align-items:center}
+header h1{font-size:16px;margin:0 auto 0 4px}
+.tab{border:0;background:var(--chip);color:var(--ink);padding:8px 12px;border-radius:10px;font:inherit;font-size:14px}
+.tab.on{background:var(--acc);color:#fff}
+main{flex:1;overflow:auto;padding:12px;max-width:640px;width:100%;margin:0 auto}
+.view{display:none}.view.on{display:block}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+select,input[type=search],textarea{font:inherit;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);min-width:0}
+select{flex:1}
+label.chk{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--mute)}
+.prog{height:6px;background:var(--chip);border-radius:3px;overflow:hidden;margin:4px 0 10px}
+.prog>i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+.meta{display:flex;justify-content:space-between;font-size:13px;color:var(--mute)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;min-height:min(52vh,360px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px 18px;margin:10px 0;cursor:pointer;user-select:none;touch-action:pan-y;transition:transform .15s,opacity .15s}
+.card .big{font-size:clamp(56px,22vw,110px);line-height:1.1;font-family:"Noto Serif SC","Songti SC",SimSun,serif}
+.card .mid{font-size:clamp(22px,7vw,34px);font-weight:600}
+.card .py{font-size:clamp(22px,7vw,30px);color:var(--acc);margin-top:8px}
+.card .note{font-size:14px;color:var(--mute);margin-top:14px}
+.card .hint{font-size:13px;color:var(--mute);margin-top:18px}
+.row{display:flex;gap:10px}
+.btn{flex:1;border:0;border-radius:14px;padding:14px;font:inherit;font-weight:600;color:#fff}
+.btn.bad{background:var(--bad)}.btn.ok{background:var(--ok)}.btn.alt{background:var(--chip);color:var(--ink);flex:0 0 auto;padding:14px 18px}
+.empty{text-align:center;color:var(--mute);padding:40px 10px}
+.list .it{display:flex;gap:12px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
+.list .h{font-size:28px;min-width:64px;font-family:"Noto Serif SC","Songti SC",SimSun,serif}
+.list .p{color:var(--acc);font-size:14px}.list .m{font-size:15px}
+.list .dot{margin-left:auto;width:10px;height:10px;border-radius:50%;background:var(--chip);flex:none}
+.list .dot.k{background:var(--ok)}
+.list .g{font-size:12px;color:var(--mute);margin:14px 0 2px;text-transform:uppercase;letter-spacing:.05em}
+textarea{width:100%;height:150px;font-family:ui-monospace,monospace;font-size:13px}
+.file{display:block;border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--mute);margin-bottom:10px}
+.file.drag{border-color:var(--acc)}
+.deck{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.deck button{border:0;background:none;color:var(--bad);font:inherit}
+.help{font-size:13px;color:var(--mute);line-height:1.6}
+.help code{background:var(--chip);padding:1px 5px;border-radius:5px}
+h3{margin:18px 0 6px;font-size:15px}
+</style>
+</head>
+<body>
+<header>
+  <h1>漢 Flashcard</h1>
+  <button class="tab on" data-v="study">Học</button>
+  <button class="tab" data-v="list">Danh sách</button>
+  <button class="tab" data-v="load">Nạp .md</button>
+</header>
+<main>
+  <section id="study" class="view on">
+    <div class="bar">
+      <select id="grp"></select>
+      <select id="mode">
+        <option value="h2m">Chữ → nghĩa</option>
+        <option value="m2h">Nghĩa → chữ</option>
+        <option value="p2h">Pinyin → chữ</option>
+      </select>
+    </div>
+    <div class="bar">
+      <label class="chk"><input type="checkbox" id="onlyNew" checked> Chỉ thẻ chưa thuộc</label>
+      <label class="chk"><input type="checkbox" id="shuf" checked> Xáo trộn</label>
+    </div>
+    <div class="meta"><span id="cnt"></span><span id="stat"></span></div>
+    <div class="prog"><i id="bar"></i></div>
+    <div id="stage"></div>
+  </section>
+
+  <section id="list" class="view">
+    <div class="bar"><input type="search" id="q" placeholder="Tìm chữ / pinyin / nghĩa…" style="flex:1"></div>
+    <div id="items" class="list"></div>
+  </section>
+
+  <section id="load" class="view">
+    <label class="file" id="drop">Chạm để chọn file .md / .txt (chọn được nhiều file), hoặc kéo thả vào đây
+      <input type="file" id="file" accept=".md,.txt,.markdown,text/*" multiple hidden>
+    </label>
+    <textarea id="paste" placeholder="Hoặc dán nội dung markdown vào đây…"></textarea>
+    <div class="bar" style="margin-top:8px">
+      <button class="tab on" id="addPaste">Thêm nội dung dán</button>
+      <button class="tab" id="sample">Nạp dữ liệu mẫu</button>
+      <button class="tab" id="resetProg">Xoá tiến độ</button>
+    </div>
+    <h3>Bộ đang nạp</h3>
+    <div id="decks"></div>
+    <h3>Định dạng nhận diện</h3>
+    <div class="help">
+      Bảng markdown, cột nhận theo tên: <code>Chữ</code>/<code>Từ</code>, <code>Pinyin</code>, <code>Nghĩa</code>, cột khác thành ghi chú. Không có tiêu đề rõ thì lấy cột 1 = chữ, cột 2 = pinyin hoặc nghĩa, cột 3 = nghĩa.<br>
+      Dòng dạng <code>人：human (ren2)</code> hoặc <code>- 好: tốt (hao3)</code>. Pinyin số (<code>ren2</code>) tự đổi thành dấu (rén).<br>
+      Tiêu đề <code>#</code>/<code>##</code> được dùng làm nhóm để lọc.
+    </div>
+  </section>
+</main>
+
+<script>
+const $=s=>document.querySelector(s), LS=localStorage;
+const jget=(k,d)=>{try{return JSON.parse(LS.getItem(k))??d}catch{return d}};
+const jset=(k,v)=>{try{LS.setItem(k,JSON.stringify(v))}catch{}};
+
+/* ---------- pinyin ---------- */
+const TONE={a:'āáǎàa',e:'ēéěèe',i:'īíǐìi',o:'ōóǒòo',u:'ūúǔùu',ü:'ǖǘǚǜü'};
+function numToMark(s){
+  return s.replace(/([a-züv:]+?)([1-5])(?![0-9])/gi,(m,syl,t)=>{
+    syl=syl.replace(/u:|v/gi,'ü'); t=+t-1;
+    let k=syl.search(/[aeAE]/); if(k<0){const o=syl.search(/ou/i); k=o>=0?o:-1}
+    if(k<0){for(let i=syl.length-1;i>=0;i--)if(/[aeiouü]/i.test(syl[i])){k=i;break}}
+    if(k<0)return m;
+    const c=syl[k].toLowerCase(), r=TONE[c][t];
+    return syl.slice(0,k)+(syl[k]===syl[k].toUpperCase()&&/[A-Z]/.test(syl[k])?r.toUpperCase():r)+syl.slice(k+1);
+  });
+}
+const looksPinyin=s=>/^[a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜüv:0-9\s'’\/,·-]+$/.test(s)&&/[a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùü]/.test(s)&&(/[1-5āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/.test(s));
+
+/* ---------- parser ---------- */
+const CJK=/[\u3400-\u9fff]/;
+const isFront=s=>CJK.test(s)&&s.length<=12&&!/[A-Za-z]{2,}/.test(s);
+function cells(line){return line.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=>c.trim())}
+function colRole(h){
+  h=h.toLowerCase();
+  if(/pinyin|phiên âm|phien am|âm đọc/.test(h))return'py';
+  if(/nghĩa|nghia|meaning|dịch|english/.test(h))return'mean';
+  if(/chữ|chu|hán|han|từ|tu|word|hanzi|bộ thủ|bo thu|character/.test(h))return'front';
+  return'note';
+}
+function parse(text,deckName){
+  const out=[]; let group=deckName, roles=null;
+  const lines=text.replace(/\r/g,'').split('\n');
+  for(let i=0;i<lines.length;i++){
+    const raw=lines[i], line=raw.trim();
+    if(!line){continue}
+    const hm=line.match(/^#{1,6}\s+(.+)/);
+    if(hm){group=hm[1].replace(/[*_`]/g,'').trim();roles=null;continue}
+    if(line.startsWith('|')){
+      const c=cells(line);
+      if(c.every(x=>/^:?-{2,}:?$/.test(x)||x===''))continue;
+      const next=(lines[i+1]||'').trim();
+      if(/^\|?\s*:?-{2,}/.test(next)){roles=c.map(colRole);if(!roles.includes('front'))roles[0]='front';continue}
+      let r=roles;
+      if(!r){r=c.map((x,j)=>j===0?'front':'note');
+        if(c[1]!==undefined){r[1]=looksPinyin(c[1])?'py':'mean'}
+        if(c[2]!==undefined){r[2]=r[1]==='py'?'mean':'note'}}
+      const card={front:'',py:'',mean:'',note:[],group};
+      c.forEach((x,j)=>{if(!x)return;const k=r[j]||'note';
+        if(k==='note')card.note.push(x);else card[k]=card[k]?card[k]+' / '+x:x});
+      card.front=card.front.replace(/\*+/g,'');
+      if(isFront(card.front)&&(card.mean||card.py))push(card);
+      continue;
+    }
+    const m=line.replace(/^[-*+]\s+|^\d+[.)]\s+/,'').match(/^([^\s:：]{1,12}(?:\s*[(（][^)）]*[)）])?)\s*[:：]\s*(.+)$/);
+    if(m&&isFront(m[1].replace(/[(（][^)）]*[)）]/g,'').trim()||'')){
+      let front=m[1].replace(/\*+/g,'').trim(), rest=m[2].trim(), py='';
+      const pm=rest.match(/[(（]\s*([a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜüv:\s]+?[1-5]?)\s*[)）]+\s*$/);
+      if(pm&&looksPinyin(pm[1])){py=pm[1];rest=rest.slice(0,pm.index).trim()}
+      push({front,py,mean:rest,note:[],group});
+    }
+  }
+  function push(card){card.py=numToMark(card.py);card.id=card.front;out.push(card)}
+  return out;
+}
+
+/* ---------- state ---------- */
+let decks=jget('cc.decks',{});         // name -> text
+let prog=jget('cc.prog',{});           // id -> box 0..4
+let set=jget('cc.set',{grp:'',mode:'h2m',onlyNew:true,shuf:true});
+let cards=[], queue=[], pos=0, flipped=false, sess={ok:0,bad:0};
+const MASTER=3;
+
+function rebuild(){
+  const seen=new Set(); cards=[];
+  for(const [n,t] of Object.entries(decks))for(const c of parse(t,n.replace(/\.\w+$/,''))){
+    const k=c.group+'\u0000'+c.id; if(seen.has(k))continue; seen.add(k); cards.push(c)}
+  const gs=[...new Set(cards.map(c=>c.group))];
+  $('#grp').innerHTML='<option value="">Tất cả ('+cards.length+' thẻ)</option>'+gs.map(g=>`<option value="${esc(g)}">${esc(g)} (${cards.filter(c=>c.group===g).length})</option>`).join('');
+  if(!gs.includes(set.grp))set.grp='';
+  $('#grp').value=set.grp; $('#mode').value=set.mode; $('#onlyNew').checked=set.onlyNew; $('#shuf').checked=set.shuf;
+  renderDecks(); renderList(); buildQueue();
+}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const box=c=>prog[c.id]||0;
+
+function buildQueue(){
+  let q=cards.filter(c=>!set.grp||c.group===set.grp);
+  if(set.mode==='p2h')q=q.filter(c=>c.py);
+  const total=q.length, known=q.filter(c=>box(c)>=MASTER).length;
+  if(set.onlyNew)q=q.filter(c=>box(c)<MASTER);
+  if(set.shuf)for(let i=q.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[q[i],q[j]]=[q[j],q[i]]}
+  queue=q;pos=0;flipped=false;sess={ok:0,bad:0};
+  $('#bar').style.width=(total?known/total*100:0)+'%';
+  $('#stat').textContent=`Thuộc ${known}/${total}`;
+  renderCard();
+}
+
+function renderCard(){
+  const st=$('#stage');
+  if(!cards.length){st.innerHTML='<div class="empty">Chưa có dữ liệu.<br>Vào tab <b>Nạp .md</b> để thêm file.</div>';$('#cnt').textContent='';return}
+  if(pos>=queue.length){
+    st.innerHTML=`<div class="empty">${queue.length?'Xong lượt này 🎉':'Không còn thẻ nào cần học 🎉'}<br>${queue.length?`Nhớ ${sess.ok} · Chưa nhớ ${sess.bad}<br><br>`:'<br>'}<button class="tab on" id="again">Học lại</button> <button class="tab" id="all">Ôn tất cả</button></div>`;
+    $('#cnt').textContent='';
+    $('#again').onclick=buildQueue;
+    $('#all').onclick=()=>{set.onlyNew=false;jset('cc.set',set);$('#onlyNew').checked=false;buildQueue()};
+    return}
+  const c=queue[pos]; $('#cnt').textContent=`${pos+1} / ${queue.length}`;
+  const mode=set.mode, note=c.note.length?`<div class="note">${esc(c.note.join(' · '))}</div>`:'';
+  let front,back;
+  if(mode==='h2m'){front=`<div class="big">${esc(c.front)}</div>`;
+    back=`<div class="big">${esc(c.front)}</div><div class="py">${esc(c.py)}</div><div class="mid">${esc(c.mean)}</div>${note}`}
+  else if(mode==='m2h'){front=`<div class="mid">${esc(c.mean||c.py)}</div>`;
+    back=`<div class="big">${esc(c.front)}</div><div class="py">${esc(c.py)}</div>${note}`}
+  else{front=`<div class="py" style="font-size:clamp(34px,12vw,56px);margin:0">${esc(c.py)}</div>`;
+    back=`<div class="big">${esc(c.front)}</div><div class="mid">${esc(c.mean)}</div>${note}`}
+  $('#stage').innerHTML=`<div class="card" id="card">${flipped?back:front}<div class="hint">${flipped?'':'Chạm để lật'}</div></div>
+    <div class="row"><button class="btn alt" id="spk" title="Đọc">🔊</button><button class="btn bad" id="bad">Chưa nhớ</button><button class="btn ok" id="ok">Nhớ rồi</button></div>
+    <div class="hint" style="text-align:center;font-size:12px;color:var(--mute);margin-top:8px">Vuốt trái = chưa nhớ · vuốt phải = nhớ</div>`;
+  const card=$('#card');
+  card.onclick=()=>{flipped=!flipped;renderCard();if(flipped)speak(c)};
+  $('#bad').onclick=()=>answer(false);$('#ok').onclick=()=>answer(true);
+  $('#spk').onclick=()=>speak(c,true);
+  let sx=0,sy=0,dx=0;
+  card.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;dx=0},{passive:true});
+  card.addEventListener('touchmove',e=>{dx=e.touches[0].clientX-sx;if(Math.abs(dx)>10){card.style.transform=`translateX(${dx}px) rotate(${dx/30}deg)`;card.style.opacity=1-Math.min(Math.abs(dx)/400,.5)}},{passive:true});
+  card.addEventListener('touchend',e=>{const dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)>80&&Math.abs(dy)<80){e.preventDefault();answer(dx>0)}else{card.style.transform='';card.style.opacity=''}});
+}
+function answer(ok){
+  const c=queue[pos]; if(!c)return;
+  prog[c.id]=ok?Math.min(box(c)+1,4):0; jset('cc.prog',prog);
+  ok?sess.ok++:sess.bad++;
+  if(!ok&&set.onlyNew)queue.push(c);   // thẻ chưa nhớ quay lại cuối lượt
+  pos++;flipped=false;
+  const q=cards.filter(x=>!set.grp||x.group===set.grp), known=q.filter(x=>box(x)>=MASTER).length;
+  $('#bar').style.width=(q.length?known/q.length*100:0)+'%';$('#stat').textContent=`Thuộc ${known}/${q.length}`;
+  renderCard();renderList();
+}
+function speak(c,force){
+  if(!('speechSynthesis' in window))return;
+  if(!force&&set.mode==='m2h'&&!flipped)return;
+  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(c.front.replace(/[(（].*?[)）]/g,''));u.lang='zh-CN';u.rate=.8;speechSynthesis.speak(u)}catch{}
+}
+
+/* ---------- list ---------- */
+function renderList(){
+  const q=$('#q').value.trim().toLowerCase(); let h='',last=null;
+  const list=cards.filter(c=>!q||(c.front+' '+c.py+' '+c.mean+' '+c.note.join(' ')).toLowerCase().includes(q));
+  for(const c of list){
+    if(c.group!==last){h+=`<div class="g">${esc(c.group)}</div>`;last=c.group}
+    h+=`<div class="it"><div class="h">${esc(c.front)}</div><div><div class="p">${esc(c.py)}</div><div class="m">${esc(c.mean)}</div></div><span class="dot ${box(c)>=MASTER?'k':''}"></span></div>`}
+  $('#items').innerHTML=h||'<div class="empty">Không có thẻ nào.</div>';
+}
+
+/* ---------- decks ---------- */
+function renderDecks(){
+  const n=Object.keys(decks);
+  $('#decks').innerHTML=n.length?n.map(k=>`<div class="deck"><span>${esc(k)} · ${parse(decks[k],k).length} thẻ</span><button data-k="${esc(k)}">Xoá</button></div>`).join(''):'<div class="help">Chưa có bộ nào.</div>';
+  $('#decks').querySelectorAll('button').forEach(b=>b.onclick=()=>{delete decks[b.dataset.k];jset('cc.decks',decks);rebuild()});
+}
+function addDeck(name,text){
+  if(!parse(text,name).length){alert('Không nhận diện được thẻ nào trong "'+name+'".');return false}
+  decks[name]=text;jset('cc.decks',decks);return true;
+}
+async function addFiles(files){
+  let ok=false;for(const f of files){ok=addDeck(f.name,await f.text())||ok}
+  if(ok){rebuild();show('study')}
+}
+$('#file').onchange=e=>{addFiles([...e.target.files]);e.target.value=''};
+const drop=$('#drop');
+['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')}));
+drop.addEventListener('drop',e=>addFiles([...e.dataTransfer.files]));
+$('#addPaste').onclick=()=>{const t=$('#paste').value;if(t.trim()&&addDeck('Dán '+new Date().toLocaleString('vi-VN'),t)){$('#paste').value='';rebuild();show('study')}};
+$('#sample').onclick=()=>{addDeck('mau.md',`## Bộ thủ
+| Chữ | Pinyin | Nghĩa |
+|---|---|---|
+| 人 | ren2 | người |
+| 口 | kou3 | miệng |
+| 水 | shui3 | nước |
+| 火 | huo3 | lửa |
+
+## Chữ ghép
+好: tốt (hao3)
+休: nghỉ ngơi (xiu1)
+明: sáng (ming2)
+`);rebuild();show('study')};
+$('#resetProg').onclick=()=>{if(confirm('Xoá toàn bộ tiến độ đã thuộc?')){prog={};jset('cc.prog',prog);buildQueue();renderList()}};
+
+/* ---------- ui ---------- */
+function show(v){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id===v));document.querySelectorAll('.tab[data-v]').forEach(x=>x.classList.toggle('on',x.dataset.v===v))}
+document.querySelectorAll('.tab[data-v]').forEach(b=>b.onclick=()=>show(b.dataset.v));
+$('#grp').onchange=e=>{set.grp=e.target.value;jset('cc.set',set);buildQueue()};
+$('#mode').onchange=e=>{set.mode=e.target.value;jset('cc.set',set);buildQueue()};
+$('#onlyNew').onchange=e=>{set.onlyNew=e.target.checked;jset('cc.set',set);buildQueue()};
+$('#shuf').onchange=e=>{set.shuf=e.target.checked;jset('cc.set',set);buildQueue()};
+$('#q').oninput=renderList;
+document.addEventListener('keydown',e=>{
+  if(!$('#study').classList.contains('on')||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
+  if(e.key===' '||e.key==='Enter'){e.preventDefault();$('#card')?.click()}
+  else if(e.key==='ArrowRight')answer(true);else if(e.key==='ArrowLeft')answer(false);
+});
+
+rebuild();
+// Nếu đặt flashcard.html cạnh file deck.md (khi host), tự nạp lần đầu
+if(!Object.keys(decks).length&&location.protocol.startsWith('http')){
+  fetch('deck.md').then(r=>r.ok?r.text():Promise.reject()).then(t=>{if(addDeck('deck.md',t))rebuild()}).catch(()=>{});
+}
+</script>
+</body>
+</html>
