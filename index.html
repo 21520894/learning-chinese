@@ -47,6 +47,13 @@ textarea{width:100%;height:150px;font-family:ui-monospace,monospace;font-size:13
 .deck button{border:0;background:none;color:var(--bad);font:inherit}
 .help{font-size:13px;color:var(--mute);line-height:1.6}
 .help code{background:var(--chip);padding:1px 5px;border-radius:5px}
+.q .lbl{font-size:14px;color:var(--mute);margin-bottom:6px}
+.q .ans{width:100%;font-size:22px;padding:12px 14px;margin:14px 0 10px;border-radius:14px;border:2px solid var(--line);background:var(--card);color:var(--ink);text-align:center}
+.q .ans:focus{outline:0;border-color:var(--acc)}
+.fb{border-radius:14px;padding:12px;margin-bottom:10px;text-align:left;font-size:15px;width:100%}
+.fb.ok{background:color-mix(in srgb,var(--ok) 18%,transparent)}.fb.bad{background:color-mix(in srgb,var(--bad) 18%,transparent)}
+.fb b{font-size:17px}
+.fb .h{font-size:30px;font-family:"Noto Serif SC","Songti SC",SimSun,serif}
 h3{margin:18px 0 6px;font-size:15px}
 </style>
 </head>
@@ -54,6 +61,7 @@ h3{margin:18px 0 6px;font-size:15px}
 <header>
   <h1>漢 Flashcard</h1>
   <button class="tab on" data-v="study">Học</button>
+  <button class="tab" data-v="quiz">Kiểm tra</button>
   <button class="tab" data-v="list">Danh sách</button>
   <button class="tab" data-v="load">Nạp .md</button>
 </header>
@@ -74,6 +82,19 @@ h3{margin:18px 0 6px;font-size:15px}
     <div class="meta"><span id="cnt"></span><span id="stat"></span></div>
     <div class="prog"><i id="bar"></i></div>
     <div id="stage"></div>
+  </section>
+
+  <section id="quiz" class="view">
+    <div class="bar"><select id="qgrp"></select><select id="qmode">
+      <option value="mix">Trộn lẫn</option>
+      <option value="h2p">Chữ → gõ pinyin</option>
+      <option value="h2m">Chữ → gõ nghĩa</option>
+      <option value="m2h">Nghĩa → gõ chữ</option>
+      <option value="p2h">Pinyin → gõ chữ</option>
+    </select></div>
+    <div class="bar"><select id="qn"><option value="10">10 câu</option><option value="20">20 câu</option><option value="0">Tất cả</option></select>
+      <button class="tab on" id="qstart">Bắt đầu</button></div>
+    <div id="qstage"></div>
   </section>
 
   <section id="list" class="view">
@@ -183,7 +204,8 @@ function rebuild(){
   $('#grp').innerHTML='<option value="">Tất cả ('+cards.length+' thẻ)</option>'+gs.map(g=>`<option value="${esc(g)}">${esc(g)} (${cards.filter(c=>c.group===g).length})</option>`).join('');
   if(!gs.includes(set.grp))set.grp='';
   $('#grp').value=set.grp; $('#mode').value=set.mode; $('#onlyNew').checked=set.onlyNew; $('#shuf').checked=set.shuf;
-  renderDecks(); renderList(); buildQueue();
+  $('#qgrp').innerHTML=$('#grp').innerHTML; $('#qgrp').value=set.grp;
+  renderDecks(); renderList(); buildQueue(); qReset();
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const box=c=>prog[c.id]||0;
@@ -291,6 +313,80 @@ $('#sample').onclick=()=>{addDeck('mau.md',`## Bộ thủ
 明: sáng (ming2)
 `);rebuild();show('study')};
 $('#resetProg').onclick=()=>{if(confirm('Xoá toàn bộ tiến độ đã thuộc?')){prog={};jset('cc.prog',prog);buildQueue();renderList()}};
+
+/* ---------- quiz ---------- */
+const fold=s=>String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/[^a-z0-9㐀-鿿]+/g,' ').trim();
+const pyKey=s=>numToMark(s.trim().toLowerCase()).replace(/[\s'’·-]+/g,'');
+const pyBase=s=>pyKey(s).normalize('NFD').replace(/[̀-ͯ0-9]/g,'');
+function checkAnswer(c,mode,raw){
+  const a=raw.trim(); if(!a)return{ok:false,empty:true};
+  if(mode==='h2p'){
+    const alts=c.py.split(/[\/,]/).map(x=>x.trim()).filter(Boolean), k=pyKey(a);
+    if(alts.some(x=>pyKey(x)===k))return{ok:true};
+    if(alts.some(x=>pyBase(x)===pyBase(a)))return{ok:false,near:'Đúng âm nhưng sai hoặc thiếu thanh điệu.'};
+    return{ok:false};
+  }
+  if(mode==='h2m'){
+    const u=fold(a); if(!u)return{ok:false};
+    const segs=c.mean.replace(/[(（][^)）]*[)）]/g,' ').split(/[,;\/、]/).map(fold).filter(Boolean);
+    return{ok:segs.some(x=>x===u||(x.length>=3&&u.includes(x))||(u.length>=3&&x.includes(u)))};
+  }
+  const toks=c.front.split(/[()（）\s\/、,]+/).filter(Boolean), v=a.replace(/\s+/g,'').replace(/[()（）]/g,'');
+  return{ok:toks.includes(v)||c.front.replace(/[\s()（）]/g,'')===v};
+}
+let Q=null;
+const qModes=c=>['h2p','h2m','m2h','p2h'].filter(m=>(m==='h2p'||m==='p2h')?c.py:c.mean);
+function qReset(){Q=null;$('#qstage').innerHTML=cards.length?'':'<div class="empty">Chưa có dữ liệu. Vào tab <b>Nạp .md</b> trước.</div>'}
+function qStart(list){
+  if(!list){
+    const mode=$('#qmode').value, g=$('#qgrp').value, n=+$('#qn').value;
+    let pool=cards.filter(c=>!g||c.group===g);
+    pool=pool.filter(c=>mode==='mix'?qModes(c).length:qModes(c).includes(mode));
+    for(let i=pool.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[pool[i],pool[j]]=[pool[j],pool[i]]}
+    if(n)pool=pool.slice(0,n);
+    list=pool.map(c=>{const ms=qModes(c);return{c,m:mode==='mix'?ms[Math.random()*ms.length|0]:mode}});
+  }
+  if(!list.length){$('#qstage').innerHTML='<div class="empty">Không có thẻ phù hợp chế độ này (thiếu pinyin hoặc nghĩa).</div>';return}
+  Q={list,i:0,score:0,wrong:[],res:null};qRender();
+}
+function qRender(){
+  const st=$('#qstage');
+  if(Q.i>=Q.list.length){
+    const w=Q.wrong;
+    st.innerHTML=`<div class="empty"><div style="font-size:42px;font-weight:700;color:var(--ink)">${Q.score}/${Q.list.length}</div>${w.length?'Cần ôn lại:':'Tuyệt vời, đúng hết! 🎉'}</div>
+      <div class="list">${w.map(x=>`<div class="it"><div class="h">${esc(x.c.front)}</div><div><div class="p">${esc(x.c.py)}</div><div class="m">${esc(x.c.mean)}</div></div></div>`).join('')}</div>
+      <div class="row" style="margin-top:12px">${w.length?'<button class="btn bad" id="qretry">Làm lại câu sai</button>':''}<button class="btn ok" id="qnew">Bài mới</button></div>`;
+    if(w.length)$('#qretry').onclick=()=>qStart(w.map(x=>({c:x.c,m:x.m})));
+    $('#qnew').onclick=()=>qStart();
+    return}
+  const {c,m}=Q.list[Q.i], r=Q.res;
+  const P={h2p:['Gõ pinyin của chữ','<div class="big">'+esc(c.front)+'</div>','pinyin, vd: ren2 hoặc rén'],
+    h2m:['Nghĩa của chữ này là gì?','<div class="big">'+esc(c.front)+'</div>','gõ nghĩa'],
+    m2h:['Gõ chữ Hán có nghĩa','<div class="mid">'+esc(c.mean)+'</div>','gõ chữ Hán'],
+    p2h:['Gõ chữ Hán có pinyin','<div class="py" style="margin:0;font-size:clamp(34px,12vw,56px)">'+esc(c.py)+'</div>','gõ chữ Hán']}[m];
+  const fb=r?`<div class="fb ${r.ok?'ok':'bad'}"><b>${r.ok?'✓ Đúng':'✗ Sai'}</b>${r.near?'<br>'+r.near:''}<br><span class="h">${esc(c.front)}</span> ${esc(c.py)} — ${esc(c.mean)}</div>`:'';
+  st.innerHTML=`<div class="meta"><span>Câu ${Q.i+1} / ${Q.list.length}</span><span>Điểm ${Q.score}</span></div><div class="prog"><i style="width:${Q.i/Q.list.length*100}%;background:var(--acc)"></i></div>
+    <form class="q card" id="qform" style="cursor:default" autocomplete="off"><div class="lbl">${P[0]}</div>${P[1]}
+      <input class="ans" id="qin" ${m==='m2h'||m==='p2h'?'lang="zh"':''} placeholder="${P[2]}" autocapitalize="off" autocorrect="off" spellcheck="false" ${r?'readonly':''}>
+      ${fb}
+      <div class="row" style="width:100%">${r&&!r.ok?'<button type="button" class="btn alt" id="qforce">Tính là đúng</button>':''}<button class="btn ${r?'ok':'bad'}" type="submit">${r?'Tiếp':'Kiểm tra'}</button>${r?'':'<button type="button" class="btn alt" id="qskip">Bỏ qua</button>'}</div>
+    </form>`;
+  const inp=$('#qin'); if(!r)inp.focus();
+  $('#qform').onsubmit=e=>{e.preventDefault();
+    if(Q.res){Q.i++;Q.res=null;qRender();return}
+    const res=checkAnswer(c,m,inp.value); if(res.empty)return;
+    qMark(res);qRender()};
+  const sk=$('#qskip'); if(sk)sk.onclick=()=>{qMark({ok:false});qRender()};
+  const fc=$('#qforce'); if(fc)fc.onclick=()=>{
+    Q.score++;Q.wrong=Q.wrong.filter(x=>x.c!==c);prog[c.id]=1;jset('cc.prog',prog);Q.res={ok:true};qRender()};
+}
+function qMark(res){
+  const {c,m}=Q.list[Q.i]; Q.res=res;
+  if(res.ok)Q.score++;else Q.wrong.push({c,m});
+  prog[c.id]=res.ok?Math.min(box(c)+1,4):0;jset('cc.prog',prog);
+}
+$('#qstart').onclick=()=>qStart();
+['#qgrp','#qmode','#qn'].forEach(s=>$(s).onchange=qReset);
 
 /* ---------- ui ---------- */
 function show(v){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id===v));document.querySelectorAll('.tab[data-v]').forEach(x=>x.classList.toggle('on',x.dataset.v===v))}
