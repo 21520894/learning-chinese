@@ -371,17 +371,17 @@ function qRender(){
       ${fb}
       <div class="row" style="width:100%">${r&&!r.ok?'<button type="button" class="btn alt" id="qforce">Tính là đúng</button>':''}<button class="btn ${r?'ok':'bad'}" type="submit">${r?'Tiếp':'Kiểm tra'}</button>${r?'':'<button type="button" class="btn alt" id="qskip">Bỏ qua</button>'}</div>
     </form>`;
-  const inp=$('#qin'); if(!r)inp.focus();
+  const inp=$('#qin'); if(!r)inp.focus(); else $('#qform button[type=submit]').focus();
   $('#qform').onsubmit=e=>{e.preventDefault();
-    if(Q.res){Q.i++;Q.res=null;qRender();return}
+    if(Q.res){if(Date.now()-Q.t<250)return;Q.i++;Q.res=null;qRender();return}
     const res=checkAnswer(c,m,inp.value); if(res.empty)return;
     qMark(res);qRender()};
   const sk=$('#qskip'); if(sk)sk.onclick=()=>{qMark({ok:false});qRender()};
   const fc=$('#qforce'); if(fc)fc.onclick=()=>{
-    Q.score++;Q.wrong=Q.wrong.filter(x=>x.c!==c);prog[c.id]=1;jset('cc.prog',prog);Q.res={ok:true};qRender()};
+    Q.score++;Q.wrong=Q.wrong.filter(x=>x.c!==c);prog[c.id]=1;jset('cc.prog',prog);Q.res={ok:true};Q.t=Date.now();qRender()};
 }
 function qMark(res){
-  const {c,m}=Q.list[Q.i]; Q.res=res;
+  const {c,m}=Q.list[Q.i]; Q.res=res; Q.t=Date.now();
   if(res.ok)Q.score++;else Q.wrong.push({c,m});
   prog[c.id]=res.ok?Math.min(box(c)+1,4):0;jset('cc.prog',prog);
 }
