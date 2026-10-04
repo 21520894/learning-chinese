@@ -246,7 +246,7 @@ function renderCard(){
   const card=$('#card');
   card.onclick=()=>{flipped=!flipped;renderCard();if(flipped)speak(c)};
   $('#bad').onclick=()=>answer(false);$('#ok').onclick=()=>answer(true);
-  $('#spk').onclick=()=>speak(c,true);
+  $('#spk').onclick=()=>{toast('Đang tải giọng đọc…');speak(c,true)};
   let sx=0,sy=0,dx=0;
   card.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;dx=0},{passive:true});
   card.addEventListener('touchmove',e=>{dx=e.touches[0].clientX-sx;if(Math.abs(dx)>10){card.style.transform=`translateX(${dx}px) rotate(${dx/30}deg)`;card.style.opacity=1-Math.min(Math.abs(dx)/400,.5)}},{passive:true});
@@ -266,7 +266,7 @@ function answer(ok){
 let zhVoice=null;
 function pickVoice(){
   const vs=speechSynthesis.getVoices();
-  zhVoice=vs.find(v=>/^zh[-_]CN/i.test(v.lang))||vs.find(v=>/^zh/i.test(v.lang))||vs.find(v=>/chinese|mandarin|中文|普通话/i.test(v.name))||null;
+  zhVoice=vs.find(v=>/^zh[-_]CN/i.test(v.lang)&&v.localService)||vs.find(v=>/^zh[-_]CN/i.test(v.lang))||vs.find(v=>/^zh/i.test(v.lang))||vs.find(v=>/chinese|mandarin|中文|普通话/i.test(v.name))||null;
   return vs.length;
 }
 if('speechSynthesis' in window){pickVoice();speechSynthesis.addEventListener?.('voiceschanged',pickVoice)}
@@ -284,6 +284,7 @@ function speak(c,force){
     speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(c.front.replace(/[(（].*?[)）]/g,'').trim());
     u.voice=zhVoice;u.lang=zhVoice.lang;u.rate=.8;
+    u.onstart=()=>{if(force)toast('🔊 Đang đọc: '+u.text+' ('+zhVoice.name+')')};
     u.onerror=e=>{if(force&&e.error!=='canceled'&&e.error!=='interrupted')toast('Lỗi đọc: '+e.error)};
     setTimeout(()=>speechSynthesis.speak(u),60);
   }catch(e){if(force)toast('Không đọc được.')}
