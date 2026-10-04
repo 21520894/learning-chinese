@@ -159,8 +159,8 @@ function parse(text,deckName){
   for(let i=0;i<lines.length;i++){
     const raw=lines[i], line=raw.trim();
     if(!line){continue}
-    const hm=line.match(/^#{1,6}\s+(.+)/);
-    if(hm){group=hm[1].replace(/[*_`]/g,'').trim();roles=null;continue}
+    const hm=line.match(/^(#{1,6})\s+(.+)/);
+    if(hm){if(hm[1].length<=2)group=hm[2].replace(/[*_`]/g,'').trim();roles=null;continue}   // # / ## = bài; ### trở xuống chỉ là mục con
     if(line.startsWith('|')){
       const c=cells(line);
       if(c.every(x=>/^:?-{2,}:?$/.test(x)||x===''))continue;
@@ -200,18 +200,23 @@ function rebuild(){
   const seen=new Set(); cards=[];
   for(const [n,t] of Object.entries(decks))for(const c of parse(t,n.replace(/\.\w+$/,''))){
     const k=c.group+'\u0000'+c.id; if(seen.has(k))continue; seen.add(k); cards.push(c)}
-  const gs=[...new Set(cards.map(c=>c.group))];
-  $('#grp').innerHTML='<option value="">Tất cả ('+cards.length+' thẻ)</option>'+gs.map(g=>`<option value="${esc(g)}">${esc(g)} (${cards.filter(c=>c.group===g).length})</option>`).join('');
-  if(!gs.includes(set.grp))set.grp='';
+  lessons=[...new Set(cards.map(c=>c.group))];
+  const cnt=g=>cards.filter(inGrp(g)).length, last=lessons[lessons.length-1];
+  $('#grp').innerHTML=`<option value="">Tất cả các bài, xáo trộn (${cards.length} thẻ)</option>`
+    +(lessons.length>1?`<option value="@new">Bài mới nhất: ${esc(last)} (${cnt('@new')})</option><option value="@old">Các bài cũ gộp lại (${cnt('@old')})</option>`:'')
+    +lessons.map(g=>`<option value="${esc(g)}">${esc(g)} (${cnt(g)})</option>`).join('');
+  if(!['','@new','@old',...lessons].includes(set.grp)||(lessons.length<2&&set.grp[0]==='@'))set.grp='';
   $('#grp').value=set.grp; $('#mode').value=set.mode; $('#onlyNew').checked=set.onlyNew; $('#shuf').checked=set.shuf;
   $('#qgrp').innerHTML=$('#grp').innerHTML; $('#qgrp').value=set.grp;
   renderDecks(); renderList(); buildQueue(); qReset();
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const box=c=>prog[c.id]||0;
+let lessons=[];   // các bài theo thứ tự xuất hiện; bài cuối = bài mới nhất
+const inGrp=g=>c=>!g||(g==='@new'?c.group===lessons[lessons.length-1]:g==='@old'?c.group!==lessons[lessons.length-1]:c.group===g);
 
 function buildQueue(){
-  let q=cards.filter(c=>!set.grp||c.group===set.grp);
+  let q=cards.filter(inGrp(set.grp));
   if(set.mode==='p2h')q=q.filter(c=>c.py);
   const total=q.length, known=q.filter(c=>box(c)>=MASTER).length;
   if(set.onlyNew)q=q.filter(c=>box(c)<MASTER);
@@ -226,10 +231,10 @@ function renderCard(){
   const st=$('#stage');
   if(!cards.length){st.innerHTML='<div class="empty">Chưa có dữ liệu.<br>Vào tab <b>Nạp .md</b> để thêm file.</div>';$('#cnt').textContent='';return}
   if(pos>=queue.length){
-    st.innerHTML=`<div class="empty">${queue.length?'Xong lượt này 🎉':'Không còn thẻ nào cần học 🎉'}<br>${queue.length?`Nhớ ${sess.ok} · Chưa nhớ ${sess.bad}<br><br>`:'<br>'}<button class="tab on" id="again">Học lại</button> <button class="tab" id="all">Ôn tất cả</button></div>`;
+    st.innerHTML=`<div class="empty">${queue.length?'Xong lượt này 🎉':'Không còn thẻ nào cần học 🎉'}<br>${queue.length?`Nhớ ${sess.ok} · Chưa nhớ ${sess.bad}<br><br>`:'<br>'}<button class="tab on" id="again">Học lại</button> <button class="tab" id="all">Ôn tất cả các bài (xáo trộn)</button></div>`;
     $('#cnt').textContent='';
     $('#again').onclick=buildQueue;
-    $('#all').onclick=()=>{set.onlyNew=false;jset('cc.set',set);$('#onlyNew').checked=false;buildQueue()};
+    $('#all').onclick=()=>{set.onlyNew=false;set.shuf=true;set.grp='';jset('cc.set',set);$('#onlyNew').checked=false;$('#shuf').checked=true;$('#grp').value='';buildQueue()};
     return}
   const c=queue[pos]; $('#cnt').textContent=`${pos+1} / ${queue.length}`;
   const mode=set.mode, note=c.note.length?`<div class="note">${esc(c.note.join(' · '))}</div>`:'';
@@ -259,7 +264,7 @@ function answer(ok){
   ok?sess.ok++:sess.bad++;
   if(!ok&&set.onlyNew)queue.push(c);   // thẻ chưa nhớ quay lại cuối lượt
   pos++;flipped=false;
-  const q=cards.filter(x=>!set.grp||x.group===set.grp), known=q.filter(x=>box(x)>=MASTER).length;
+  const q=cards.filter(inGrp(set.grp)), known=q.filter(x=>box(x)>=MASTER).length;
   $('#bar').style.width=(q.length?known/q.length*100:0)+'%';$('#stat').textContent=`Thuộc ${known}/${q.length}`;
   renderCard();renderList();
 }
@@ -361,7 +366,7 @@ function qReset(){Q=null;$('#qstage').innerHTML=cards.length?'':'<div class="emp
 function qStart(list){
   if(!list){
     const mode=$('#qmode').value, g=$('#qgrp').value, n=+$('#qn').value;
-    let pool=cards.filter(c=>!g||c.group===g);
+    let pool=cards.filter(inGrp(g));
     pool=pool.filter(c=>mode==='mix'?qModes(c).length:qModes(c).includes(mode));
     for(let i=pool.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[pool[i],pool[j]]=[pool[j],pool[i]]}
     if(n)pool=pool.slice(0,n);
@@ -424,9 +429,10 @@ document.addEventListener('keydown',e=>{
 });
 
 rebuild();
-// Nếu đặt flashcard.html cạnh file deck.md (khi host), tự nạp lần đầu
-if(!Object.keys(decks).length&&location.protocol.startsWith('http')){
-  fetch('deck.md').then(r=>r.ok?r.text():Promise.reject()).then(t=>{if(addDeck('deck.md',t))rebuild()}).catch(()=>{});
+// Khi host cạnh file deck.md: mỗi lần mở trang tự đồng bộ bản mới nhất (tiến độ đã thuộc được giữ nguyên)
+if(location.protocol.startsWith('http')){
+  fetch('deck.md?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():Promise.reject()).then(t=>{
+    if(decks['deck.md']!==t&&addDeck('deck.md',t))rebuild()}).catch(()=>{});
 }
 </script>
 </body>
