@@ -76,10 +76,6 @@ h3{margin:18px 0 6px;font-size:15px}
       </select>
     </div>
     <div class="bar">
-      <select id="batch"></select>
-      <select id="bsize"><option value="10">10 thẻ/lô</option><option value="20">20 thẻ/lô</option><option value="30">30 thẻ/lô</option><option value="50">50 thẻ/lô</option></select>
-    </div>
-    <div class="bar">
       <label class="chk"><input type="checkbox" id="onlyNew" checked> Chỉ thẻ chưa thuộc</label>
       <label class="chk"><input type="checkbox" id="shuf" checked> Xáo trộn</label>
     </div>
@@ -96,7 +92,7 @@ h3{margin:18px 0 6px;font-size:15px}
       <option value="m2h">Nghĩa → gõ chữ</option>
       <option value="p2h">Pinyin → gõ chữ</option>
     </select></div>
-    <div class="bar"><select id="qbatch"></select><select id="qn"><option value="10">10 câu</option><option value="20">20 câu</option><option value="0">Tất cả</option></select>
+    <div class="bar"><select id="qn"><option value="10">10 câu</option><option value="20">20 câu</option><option value="0">Tất cả</option></select>
       <button class="tab on" id="qstart">Bắt đầu</button></div>
     <div id="qstage"></div>
   </section>
@@ -196,7 +192,7 @@ function parse(text,deckName){
 /* ---------- state ---------- */
 let decks=jget('cc.decks',{});         // name -> text
 let prog=jget('cc.prog',{});           // id -> box 0..4
-let set=Object.assign({grp:'',mode:'h2m',onlyNew:true,shuf:true,size:30,batch:''},jget('cc.set',{}));
+let set=jget('cc.set',{grp:'',mode:'h2m',onlyNew:true,shuf:true});
 let cards=[], queue=[], pos=0, flipped=false, sess={ok:0,bad:0};
 const MASTER=3;
 
@@ -208,30 +204,14 @@ function rebuild(){
   $('#grp').innerHTML='<option value="">Tất cả ('+cards.length+' thẻ)</option>'+gs.map(g=>`<option value="${esc(g)}">${esc(g)} (${cards.filter(c=>c.group===g).length})</option>`).join('');
   if(!gs.includes(set.grp))set.grp='';
   $('#grp').value=set.grp; $('#mode').value=set.mode; $('#onlyNew').checked=set.onlyNew; $('#shuf').checked=set.shuf;
-  $('#bsize').value=set.size; fillBatch($('#batch'),set.grp,set.batch); set.batch=$('#batch').value;
-  $('#qgrp').innerHTML=$('#grp').innerHTML; $('#qgrp').value=set.grp; fillBatch($('#qbatch'),set.grp,'');
+  $('#qgrp').innerHTML=$('#grp').innerHTML; $('#qgrp').value=set.grp;
   renderDecks(); renderList(); buildQueue(); qReset();
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const box=c=>prog[c.id]||0;
-/* Chia lô: lô i = thẻ [i*size, (i+1)*size) theo thứ tự trong file; "u<i>" = ôn dồn từ lô 1 đến lô i+1 */
-function scopeList(grp,batch){
-  const l=cards.filter(c=>!grp||c.group===grp), z=+set.size||30;
-  if(batch==='')return l;
-  if(batch[0]==='u')return l.slice(0,(+batch.slice(1)+1)*z);
-  return l.slice(+batch*z,(+batch+1)*z);
-}
-function fillBatch(sel,grp,val){
-  const n=cards.filter(c=>!grp||c.group===grp).length, z=+set.size||30, k=Math.ceil(n/z);
-  let h='<option value="">Tất cả lô</option>';
-  for(let i=0;i<k;i++)h+=`<option value="${i}">Lô ${i+1} (thẻ ${i*z+1}–${Math.min((i+1)*z,n)})</option>`;
-  for(let i=1;i<k;i++)h+=`<option value="u${i}">Ôn dồn lô 1→${i+1}</option>`;
-  sel.innerHTML=h;
-  sel.value=[...sel.options].some(o=>o.value===val)?val:'';
-}
 
 function buildQueue(){
-  let q=scopeList(set.grp,set.batch);
+  let q=cards.filter(c=>!set.grp||c.group===set.grp);
   if(set.mode==='p2h')q=q.filter(c=>c.py);
   const total=q.length, known=q.filter(c=>box(c)>=MASTER).length;
   if(set.onlyNew)q=q.filter(c=>box(c)<MASTER);
@@ -279,7 +259,7 @@ function answer(ok){
   ok?sess.ok++:sess.bad++;
   if(!ok&&set.onlyNew)queue.push(c);   // thẻ chưa nhớ quay lại cuối lượt
   pos++;flipped=false;
-  const q=scopeList(set.grp,set.batch), known=q.filter(x=>box(x)>=MASTER).length;
+  const q=cards.filter(x=>!set.grp||x.group===set.grp), known=q.filter(x=>box(x)>=MASTER).length;
   $('#bar').style.width=(q.length?known/q.length*100:0)+'%';$('#stat').textContent=`Thuộc ${known}/${q.length}`;
   renderCard();renderList();
 }
@@ -381,7 +361,7 @@ function qReset(){Q=null;$('#qstage').innerHTML=cards.length?'':'<div class="emp
 function qStart(list){
   if(!list){
     const mode=$('#qmode').value, g=$('#qgrp').value, n=+$('#qn').value;
-    let pool=scopeList(g,$('#qbatch').value);
+    let pool=cards.filter(c=>!g||c.group===g);
     pool=pool.filter(c=>mode==='mix'?qModes(c).length:qModes(c).includes(mode));
     for(let i=pool.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[pool[i],pool[j]]=[pool[j],pool[i]]}
     if(n)pool=pool.slice(0,n);
@@ -427,15 +407,12 @@ function qMark(res){
   prog[c.id]=res.ok?Math.min(box(c)+1,4):0;jset('cc.prog',prog);
 }
 $('#qstart').onclick=()=>qStart();
-$('#qgrp').onchange=()=>{fillBatch($('#qbatch'),$('#qgrp').value,'');qReset()};
-['#qbatch','#qmode','#qn'].forEach(s=>$(s).onchange=qReset);
+['#qgrp','#qmode','#qn'].forEach(s=>$(s).onchange=qReset);
 
 /* ---------- ui ---------- */
 function show(v){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id===v));document.querySelectorAll('.tab[data-v]').forEach(x=>x.classList.toggle('on',x.dataset.v===v))}
 document.querySelectorAll('.tab[data-v]').forEach(b=>b.onclick=()=>show(b.dataset.v));
-$('#grp').onchange=e=>{set.grp=e.target.value;set.batch='';fillBatch($('#batch'),set.grp,'');jset('cc.set',set);buildQueue()};
-$('#batch').onchange=e=>{set.batch=e.target.value;jset('cc.set',set);buildQueue()};
-$('#bsize').onchange=e=>{set.size=+e.target.value;set.batch='';fillBatch($('#batch'),set.grp,'');fillBatch($('#qbatch'),$('#qgrp').value,'');jset('cc.set',set);buildQueue();qReset()};
+$('#grp').onchange=e=>{set.grp=e.target.value;jset('cc.set',set);buildQueue()};
 $('#mode').onchange=e=>{set.mode=e.target.value;jset('cc.set',set);buildQueue()};
 $('#onlyNew').onchange=e=>{set.onlyNew=e.target.checked;jset('cc.set',set);buildQueue()};
 $('#shuf').onchange=e=>{set.shuf=e.target.checked;jset('cc.set',set);buildQueue()};
