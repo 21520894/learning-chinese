@@ -263,10 +263,30 @@ function answer(ok){
   $('#bar').style.width=(q.length?known/q.length*100:0)+'%';$('#stat').textContent=`Thuộc ${known}/${q.length}`;
   renderCard();renderList();
 }
+let zhVoice=null;
+function pickVoice(){
+  const vs=speechSynthesis.getVoices();
+  zhVoice=vs.find(v=>/^zh[-_]CN/i.test(v.lang))||vs.find(v=>/^zh/i.test(v.lang))||vs.find(v=>/chinese|mandarin|中文|普通话/i.test(v.name))||null;
+  return vs.length;
+}
+if('speechSynthesis' in window){pickVoice();speechSynthesis.addEventListener?.('voiceschanged',pickVoice)}
+function toast(msg){
+  let t=$('#toast');if(!t){t=document.createElement('div');t.id='toast';
+    t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#000c;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;max-width:90vw;z-index:9;text-align:center';document.body.appendChild(t)}
+  t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',4000);
+}
 function speak(c,force){
-  if(!('speechSynthesis' in window))return;
   if(!force&&set.mode==='m2h'&&!flipped)return;
-  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(c.front.replace(/[(（].*?[)）]/g,''));u.lang='zh-CN';u.rate=.8;speechSynthesis.speak(u)}catch{}
+  if(!('speechSynthesis' in window)){if(force)toast('Trình duyệt này không hỗ trợ đọc.');return}
+  const n=pickVoice();
+  if(!zhVoice){if(force)toast(n?'Máy chưa có giọng tiếng Trung. Cài thêm trong Cài đặt > Ngôn ngữ (Windows) hoặc Text-to-speech (Android).':'Chưa nạp được danh sách giọng đọc, thử bấm lại.');return}
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(c.front.replace(/[(（].*?[)）]/g,'').trim());
+    u.voice=zhVoice;u.lang=zhVoice.lang;u.rate=.8;
+    u.onerror=e=>{if(force&&e.error!=='canceled'&&e.error!=='interrupted')toast('Lỗi đọc: '+e.error)};
+    setTimeout(()=>speechSynthesis.speak(u),60);
+  }catch(e){if(force)toast('Không đọc được.')}
 }
 
 /* ---------- list ---------- */
