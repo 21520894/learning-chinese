@@ -46,3 +46,45 @@
 | 旦   | dàn      | buổi sáng sớm, bình minh       | 日(nghĩa: mặt trời) + 一(nghĩa: đường chân trời)  |
 | 闷   | mèn      | ngột ngạt, bức bối             | 门(nghĩa: cửa, bao bọc) + 心(nghĩa: tâm/tim)          |
 | 小人 | xiǎorén | kẻ tiểu nhân, người nhỏ nhen | 小(nghĩa: nhỏ) + 人(nghĩa: người) — từ ghép 2 chữ |
+
+## Bài 2 — 2026-10-05
+
+### Bộ thủ mới
+
+| Bộ thủ   | Pinyin | Nghĩa                    |
+| -------- | ------ | ------------------------ |
+| 月       | yuè    | mặt trăng, tháng         |
+| 土       | tǔ     | đất                      |
+| 山       | shān   | núi                      |
+| 石       | shí    | đá                       |
+| 田       | tián   | ruộng                    |
+| 力       | lì     | sức lực                  |
+| 言 (讠)  | yán    | lời nói                  |
+| 金 (钅)  | jīn    | vàng, kim loại           |
+| 食 (饣)  | shí    | ăn, thức ăn              |
+| 马       | mǎ     | ngựa                     |
+| 鸟       | niǎo   | chim                     |
+| 刀       | dāo    | dao                      |
+| 足       | zú     | chân                     |
+| 耳       | ěr     | tai                      |
+| 白       | bái    | trắng                    |
+
+### Chữ ghép mới
+
+| Chữ | Pinyin | Nghĩa                    | Cấu tạo (vai trò)                                  |
+| --- | ------ | ------------------------ | -------------------------------------------------- |
+| 岩  | yán    | vách đá                  | 山(nghĩa: núi) + 石(nghĩa: đá)                      |
+| 河  | hé     | sông                     | 氵(nghĩa: nước) + 可(âm: kě→hé)                     |
+| 吃  | chī    | ăn                       | 口(nghĩa: miệng) + 乞(âm: qǐ→chī)                   |
+| 吗  | ma     | (trợ từ hỏi)             | 口(nghĩa: miệng) + 马(âm: mǎ→ma)                    |
+| 妈  | mā     | mẹ                       | 女(nghĩa: nữ) + 马(âm: mǎ→mā)                       |
+| 请  | qǐng   | mời, xin                 | 讠(nghĩa: lời nói) + 青(âm: qīng→qǐng)              |
+| 清  | qīng   | trong, sạch              | 氵(nghĩa: nước) + 青(âm: qīng)                      |
+| 说  | shuō   | nói                      | 讠(nghĩa: lời nói) + 兑(âm: duì→shuō, gợi âm xa)    |
+| 你  | nǐ     | bạn                      | 亻(nghĩa: người) + 尔(âm: ěr→nǐ)                    |
+| 他  | tā     | anh ấy, ông ấy           | 亻(nghĩa: người) + 也(âm: yě→tā)                    |
+| 们  | men    | (hậu tố chỉ số nhiều)    | 亻(nghĩa: người) + 门(âm: mén→men)                  |
+| 问  | wèn    | hỏi                      | 门(nghĩa: cửa) + 口(nghĩa: miệng) — hỏi ở cửa       |
+| 间  | jiān   | giữa, khoảng             | 门(nghĩa: cửa) + 日(nghĩa: mặt trời) — nắng qua khe cửa |
+| 闻  | wén    | nghe, ngửi, tin tức      | 门(nghĩa: cửa) + 耳(nghĩa: tai) — áp tai vào cửa    |
+| 体  | tǐ     | thân thể                 | 亻(nghĩa: người) + 本(âm: běn→tǐ)                   |
