@@ -281,8 +281,16 @@ function toast(msg){
     t.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#000c;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;max-width:90vw;z-index:9;text-align:center';document.body.appendChild(t)}
   t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',4000);
 }
+const audioUrl=c=>'audio/'+[...c.front.replace(/[(（].*?[)）]/g,'').trim()].map(ch=>ch.codePointAt(0).toString(16)).join('-')+'.mp3';
+let aud=null;
 function speak(c,force){
   if(!force&&set.mode==='m2h'&&!flipped)return;
+  try{aud&&aud.pause();aud=new Audio(audioUrl(c));
+    aud.onerror=()=>speakTTS(c,force);
+    aud.play().then(()=>{if(force)toast('🔊 '+c.front)}).catch(e=>{if(e&&e.name==='NotAllowedError'){if(force)toast('Trình duyệt chặn phát âm thanh, hãy bấm lại.')}else speakTTS(c,force)});
+  }catch(e){speakTTS(c,force)}
+}
+function speakTTS(c,force){
   if(!('speechSynthesis' in window)){if(force)toast('Trình duyệt này không hỗ trợ đọc.');return}
   const n=pickVoice();
   if(!zhVoice){if(force)toast(n?'Máy chưa có giọng tiếng Trung (bấm 🌐 để nghe qua Google Dịch). Cài thêm trong Cài đặt > Ngôn ngữ (Windows) hoặc Text-to-speech (Android).':'Chưa nạp được danh sách giọng đọc, thử bấm lại.');return}
