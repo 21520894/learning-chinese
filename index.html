@@ -246,11 +246,12 @@ function renderCard(){
   else{front=`<div class="py" style="font-size:clamp(34px,12vw,56px);margin:0">${esc(c.py)}</div>`;
     back=`<div class="big">${esc(c.front)}</div><div class="mid">${esc(c.mean)}</div>${note}`}
   $('#stage').innerHTML=`<div class="card" id="card">${flipped?back:front}<div class="hint">${flipped?'':'Chạm để lật'}</div></div>
-    <div class="row"><button class="btn alt" id="spk" title="Đọc">🔊</button><button class="btn bad" id="bad">Chưa nhớ</button><button class="btn ok" id="ok">Nhớ rồi</button></div>
+    <div class="row"><button class="btn alt" id="spk" title="Đọc">🔊</button><button class="btn alt" id="gt" title="Nghe trên Google Dịch (cần mạng)">🌐</button><button class="btn bad" id="bad">Chưa nhớ</button><button class="btn ok" id="ok">Nhớ rồi</button></div>
     <div class="hint" style="text-align:center;font-size:12px;color:var(--mute);margin-top:8px">Vuốt trái = chưa nhớ · vuốt phải = nhớ</div>`;
   const card=$('#card');
   card.onclick=()=>{flipped=!flipped;renderCard();if(flipped)speak(c)};
   $('#bad').onclick=()=>answer(false);$('#ok').onclick=()=>answer(true);
+  $('#gt').onclick=()=>window.open('https://translate.google.com/?sl=zh-CN&tl=vi&op=translate&text='+encodeURIComponent(c.front.replace(/[(（].*?[)）]/g,'').trim()),'_blank','noopener');
   $('#spk').onclick=()=>{toast('Đang tải giọng đọc…');speak(c,true)};
   let sx=0,sy=0,dx=0;
   card.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;dx=0},{passive:true});
@@ -284,7 +285,7 @@ function speak(c,force){
   if(!force&&set.mode==='m2h'&&!flipped)return;
   if(!('speechSynthesis' in window)){if(force)toast('Trình duyệt này không hỗ trợ đọc.');return}
   const n=pickVoice();
-  if(!zhVoice){if(force)toast(n?'Máy chưa có giọng tiếng Trung. Cài thêm trong Cài đặt > Ngôn ngữ (Windows) hoặc Text-to-speech (Android).':'Chưa nạp được danh sách giọng đọc, thử bấm lại.');return}
+  if(!zhVoice){if(force)toast(n?'Máy chưa có giọng tiếng Trung (bấm 🌐 để nghe qua Google Dịch). Cài thêm trong Cài đặt > Ngôn ngữ (Windows) hoặc Text-to-speech (Android).':'Chưa nạp được danh sách giọng đọc, thử bấm lại.');return}
   try{
     speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(c.front.replace(/[(（].*?[)）]/g,'').trim());
