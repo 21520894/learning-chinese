@@ -54,6 +54,16 @@ textarea{width:100%;height:150px;font-family:ui-monospace,monospace;font-size:13
 .fb.ok{background:color-mix(in srgb,var(--ok) 18%,transparent)}.fb.bad{background:color-mix(in srgb,var(--bad) 18%,transparent)}
 .fb b{font-size:17px}
 .fb .h{font-size:30px;font-family:"Noto Serif SC","Songti SC",SimSun,serif}
+@media(max-width:520px){header h1{display:none}.tab{padding:8px 10px;font-size:13px}header{overflow-x:auto}}
+.fam{margin:0 0 16px}
+.fh{display:flex;align-items:baseline;gap:8px;margin:0 0 6px;font-size:13px;color:var(--mute)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:6px 10px;min-width:64px;text-align:center;font:inherit;cursor:pointer}
+.chip.head{border-color:var(--acc)}
+.chip .ch{display:block;font-size:30px;line-height:1.2;font-family:"Noto Serif SC","Songti SC",SimSun,serif}
+.chip .cp{display:block;font-size:14px;color:var(--acc)}
+.chip .cp.hid{visibility:hidden}
+.ntitle{font-size:12px;color:var(--mute);margin:18px 0 6px;text-transform:uppercase;letter-spacing:.05em}
 h3{margin:18px 0 6px;font-size:15px}
 </style>
 </head>
@@ -62,8 +72,9 @@ h3{margin:18px 0 6px;font-size:15px}
   <h1>漢 Flashcard</h1>
   <button class="tab on" data-v="study">Học</button>
   <button class="tab" data-v="quiz">Kiểm tra</button>
+  <button class="tab" data-v="nhom">Nhóm</button>
   <button class="tab" data-v="list">Danh sách</button>
-  <button class="tab" data-v="load">Nạp .md</button>
+  <button class="tab" data-v="load">Nạp</button>
 </header>
 <main>
   <section id="study" class="view on">
@@ -95,6 +106,19 @@ h3{margin:18px 0 6px;font-size:15px}
     <div class="bar"><select id="qn"><option value="10">10 câu</option><option value="20">20 câu</option><option value="0">Tất cả</option></select>
       <button class="tab on" id="qstart">Bắt đầu</button></div>
     <div id="qstage"></div>
+  </section>
+
+  <section id="nhom" class="view">
+    <div class="bar"><select id="nmode">
+      <option value="ph">Họ gợi âm (nhớ pinyin)</option>
+      <option value="rad">Cùng bộ thủ</option>
+      <option value="les">Tất cả theo bài</option>
+    </select><select id="ngrp"></select></div>
+    <div class="bar">
+      <label class="chk"><input type="checkbox" id="nhide"> Ẩn pinyin (chạm để xem + nghe)</label>
+      <label class="chk"><input type="checkbox" id="nknown"> Chỉ thẻ đã thuộc</label>
+    </div>
+    <div id="ngrid"></div>
   </section>
 
   <section id="list" class="view">
@@ -208,7 +232,8 @@ function rebuild(){
   if(!['','@new','@old',...lessons].includes(set.grp)||(lessons.length<2&&set.grp[0]==='@'))set.grp='';
   $('#grp').value=set.grp; $('#mode').value=set.mode; $('#onlyNew').checked=set.onlyNew; $('#shuf').checked=set.shuf;
   $('#qgrp').innerHTML=$('#grp').innerHTML; $('#qgrp').value=set.grp;
-  renderDecks(); renderList(); buildQueue(); qReset();
+  {const prev=$('#ngrp').value;$('#ngrp').innerHTML=$('#grp').innerHTML;$('#ngrp').value=[...$('#ngrp').options].some(o=>o.value===prev)?prev:'';}
+  renderDecks(); renderList(); buildQueue(); qReset(); renderNhom();
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const box=c=>prog[c.id]||0;
@@ -422,6 +447,59 @@ function qMark(res){
 }
 $('#qstart').onclick=()=>qStart();
 ['#qgrp','#qmode','#qn'].forEach(s=>$(s).onchange=qReset);
+
+/* ---------- nhóm ---------- */
+const NORM={'亻':'人','忄':'心','扌':'手','氵':'水','讠':'言','钅':'金','饣':'食'};
+const mainOf=c=>c.front.replace(/[(（].*?[)）]/g,'').trim();
+function famInfo(c){
+  const r={ph:null,rads:[]};
+  for(const part of c.note.join(' ').split(/\s\+\s/)){
+    const inside=(part.match(/[(（]([^)）]*)/)||[])[1]||'';
+    const am=inside.match(/âm:\s*([^\s,)→]+)/);
+    if(am){const ch=(inside.match(/=([\u3400-\u9fff]+)/)||part.match(/^\s*([\u3400-\u9fff]+)/)||[])[1];
+      if(ch)r.ph={ch,py:numToMark(am[1])};}
+    else{const m=part.match(/^\s*([\u3400-\u9fff])/);if(m&&(!inside||/nghĩa/.test(inside)))r.rads.push(NORM[m[1]]||m[1])}
+  }
+  return r;
+}
+const cardByChar=ch=>cards.find(c=>[...mainOf(c)][0]===ch&&mainOf(c).length<=2);
+function chip(c,head,hide){
+  const i=cards.indexOf(c);
+  return `<button class="chip${head?' head':''}" data-i="${i}"><span class="ch">${esc(mainOf(c))}</span><span class="cp${hide?' hid':''}">${esc(c.py)}</span></button>`;
+}
+function renderNhom(){
+  const el=$('#ngrid'); if(!el)return;
+  const mode=$('#nmode').value, hide=$('#nhide').checked, known=$('#nknown').checked;
+  let scope=cards.filter(inGrp($('#ngrp').value)); if(known)scope=scope.filter(c=>box(c)>=MASTER);
+  if(!cards.length){el.innerHTML='<div class="empty">Chưa có dữ liệu.</div>';return}
+  let h='';
+  if(mode==='les'){
+    const by=new Map();scope.forEach(c=>{if(!by.has(c.group))by.set(c.group,[]);by.get(c.group).push(c)});
+    for(const [g,l] of by)h+=`<div class="ntitle">${esc(g)} · ${l.length} chữ</div><div class="chips">${l.map(c=>chip(c,false,hide)).join('')}</div>`;
+  }else{
+    const fam=new Map(), rest=[];
+    for(const c of scope){
+      const f=famInfo(c); let keys=mode==='ph'?(f.ph?[f.ph.ch]:[]):[...new Set(f.rads)];
+      if(!keys.length&&mode==='ph')rest.push(c);
+      for(const k of keys){if(!fam.has(k))fam.set(k,{k,py:f.ph&&mode==='ph'?f.ph.py:'',m:[]});fam.get(k).m.push(c)}
+    }
+    const list=[...fam.values()].filter(x=>mode==='ph'||x.m.length>1).sort((a,b)=>b.m.length-a.m.length);
+    for(const x of list){
+      const head=cardByChar(x.k), members=x.m.filter(c=>c!==head);
+      const label=mode==='ph'?'họ gợi âm':'cùng bộ';
+      h+=`<div class="fam"><div class="fh">${label}</div><div class="chips">${head?chip(head,true,hide):`<button class="chip head" data-k="${esc(x.k)}"><span class="ch">${esc(x.k)}</span><span class="cp${hide?' hid':''}">${esc(x.py)}</span></button>`}<span style="align-self:center;color:var(--mute)">→</span>${members.map(c=>chip(c,false,hide)).join('')}</div></div>`;
+    }
+    if(mode==='ph'&&rest.length)h+=`<div class="ntitle">Không có phần gợi âm — học âm riêng (${rest.length})</div><div class="chips">${rest.map(c=>chip(c,false,hide)).join('')}</div>`;
+    if(!h)h='<div class="empty">Chưa có nhóm nào trong phạm vi này.</div>';
+  }
+  el.innerHTML=h||'<div class="empty">Không có thẻ nào (thử bỏ lọc "Chỉ thẻ đã thuộc").</div>';
+}
+$('#ngrid').addEventListener('click',e=>{
+  const b=e.target.closest('.chip');if(!b)return;
+  const cp=b.querySelector('.cp');if(cp)cp.classList.remove('hid');
+  const c=cards[+b.dataset.i];if(c)speak(c,true);
+});
+['#nmode','#ngrp','#nhide','#nknown'].forEach(s=>$(s).onchange=renderNhom);
 
 /* ---------- ui ---------- */
 function show(v){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id===v));document.querySelectorAll('.tab[data-v]').forEach(x=>x.classList.toggle('on',x.dataset.v===v))}
