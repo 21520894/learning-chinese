@@ -478,7 +478,7 @@ function renderNhom(){
     for(const [g,l] of by)h+=`<div class="ntitle">${esc(g)} · ${l.length} chữ</div><div class="chips">${l.map(c=>chip(c,false,hide)).join('')}</div>`;
   }else{
     const fam=new Map(), rest=[];
-    for(const c of scope){
+    for(const c of scope.filter(c=>mainOf(c).length<=2)){   // câu dài không xếp vào họ gợi âm / bộ thủ
       const f=famInfo(c); let keys=mode==='ph'?(f.ph?[f.ph.ch]:[]):[...new Set(f.rads)];
       if(!keys.length&&mode==='ph')rest.push(c);
       for(const k of keys){if(!fam.has(k))fam.set(k,{k,py:f.ph&&mode==='ph'?f.ph.py:'',m:[]});fam.get(k).m.push(c)}

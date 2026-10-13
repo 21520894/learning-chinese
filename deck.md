@@ -88,3 +88,62 @@
 | 间  | jiān   | giữa, khoảng             | 门(nghĩa: cửa) + 日(nghĩa: mặt trời) — nắng qua khe cửa |
 | 闻  | wén    | nghe, ngửi, tin tức      | 门(nghĩa: cửa) + 耳(nghĩa: tai) — áp tai vào cửa    |
 | 体  | tǐ     | thân thể                 | 亻(nghĩa: người) + 本(âm: běn→tǐ)                   |
+
+## Bài 3 — 2026-10-14
+
+> Bài này bắt đầu **mẫu câu**. Thứ tự câu đơn giản giống tiếng Việt: Chủ ngữ + Động từ + Tân ngữ.
+
+### Từ mới
+
+| Chữ  | Pinyin   | Nghĩa             | Ghi chú                                                                 |
+| ---- | -------- | ----------------- | ----------------------------------------------------------------------- |
+| 我   | wǒ       | tôi               | Đại từ ngôi 1, học nguyên khối                                          |
+| 是   | shì      | là                | Dùng giữa hai danh từ: A 是 B                                           |
+| 不   | bù       | không             | Đứng trước động từ/tính từ. Trước thanh 4 đọc bú (不是 bú shì)          |
+| 有   | yǒu      | có                | Học nguyên khối                                                         |
+| 这   | zhè      | này, đây          | Chỉ vật ở gần                                                           |
+| 那   | nà       | kia, đó           | Chỉ vật ở xa                                                            |
+| 谁   | shuí     | ai                | 讠(nghĩa: lời nói) + 隹(âm: zhuī→shuí). Cũng đọc shéi                   |
+| 什么 | shénme   | cái gì            | Từ hỏi. Chữ 什 gồm 亻 và 十 (gợi âm shí→shén), 么 học nguyên khối       |
+| 叫   | jiào     | gọi, tên là       | Dùng khi nói tên: 我叫…                                                 |
+| 名字 | míngzi   | tên               | 字 đã học ở bài 1; zi đọc thanh nhẹ                                     |
+| 很   | hěn      | rất               | Đứng trước tính từ: 很好. Tính từ không cần 是                           |
+| 也   | yě       | cũng              | Đứng trước động từ/tính từ: 我也很好. Là phần gợi âm của 他 (tā)        |
+| 谢谢 | xièxie   | cảm ơn            | Chữ thứ hai đọc thanh nhẹ                                               |
+
+### Mẫu câu 1: A 是 B (A là B)
+
+| Câu     | Pinyin         | Nghĩa                  | Ghi chú                          |
+| ------- | -------------- | ---------------------- | -------------------------------- |
+| 我是人  | wǒ shì rén     | Tôi là người           | S + 是 + O                       |
+| 这是水  | zhè shì shuǐ   | Đây là nước            | 这 + 是 + danh từ                |
+| 他是好人 | tā shì hǎorén | Anh ấy là người tốt    | Tính từ đứng trước danh từ      |
+
+### Mẫu câu 2: 不 (phủ định)
+
+| Câu       | Pinyin            | Nghĩa                       | Ghi chú                           |
+| --------- | ----------------- | --------------------------- | --------------------------------- |
+| 我不是小人 | wǒ bú shì xiǎorén | Tôi không phải kẻ tiểu nhân | 不 đứng trước 是; bù đổi thành bú |
+
+### Mẫu câu 3: 吗 (câu hỏi có/không)
+
+| Câu       | Pinyin            | Nghĩa                   | Ghi chú                          |
+| --------- | ----------------- | ----------------------- | -------------------------------- |
+| 你好吗    | nǐ hǎo ma         | Bạn khỏe không?         | Thêm 吗 vào cuối câu              |
+| 这是山吗  | zhè shì shān ma   | Đây là núi à?           | Giữ nguyên câu, thêm 吗           |
+| 你是好人吗 | nǐ shì hǎorén ma  | Bạn là người tốt à?     | Giữ nguyên câu, thêm 吗           |
+
+### Mẫu câu 4: 很 + tính từ
+
+| Câu     | Pinyin        | Nghĩa               | Ghi chú                               |
+| ------- | ------------- | ------------------- | ------------------------------------- |
+| 我很好  | wǒ hěn hǎo    | Tôi rất khỏe        | Không dùng 是 trước tính từ           |
+| 山很大  | shān hěn dà   | Núi rất lớn         | 很 đứng giữa chủ ngữ và tính từ       |
+| 我也很忙 | wǒ yě hěn máng | Tôi cũng rất bận    | 也 đứng trước 很                      |
+
+### Mẫu câu 5: Hỏi và nói tên
+
+| Câu          | Pinyin               | Nghĩa                | Ghi chú                          |
+| ------------ | -------------------- | -------------------- | -------------------------------- |
+| 你叫什么名字 | nǐ jiào shénme míngzi | Bạn tên là gì?       | Thứ tự giống tiếng Việt           |
+| 我叫小明     | wǒ jiào xiǎomíng      | Tôi tên là Tiểu Minh | 小明 là tên người, ghép 小 + 明   |
