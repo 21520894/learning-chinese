@@ -54,7 +54,7 @@ textarea{width:100%;height:150px;font-family:ui-monospace,monospace;font-size:13
 .fb.ok{background:color-mix(in srgb,var(--ok) 18%,transparent)}.fb.bad{background:color-mix(in srgb,var(--bad) 18%,transparent)}
 .fb b{font-size:17px}
 .fb .h{font-size:30px;font-family:"Noto Serif SC","Songti SC",SimSun,serif}
-@media(max-width:520px){header h1{display:none}.tab{padding:8px 10px;font-size:13px}header{overflow-x:auto}}
+@media(max-width:520px){header h1{display:none}.tab{padding:8px 10px;font-size:13px;white-space:nowrap;flex:none}header{overflow-x:auto}}
 .fam{margin:0 0 16px}
 .fh{display:flex;align-items:baseline;gap:8px;margin:0 0 6px;font-size:13px;color:var(--mute)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -64,6 +64,20 @@ textarea{width:100%;height:150px;font-family:ui-monospace,monospace;font-size:13
 .chip .cp{display:block;font-size:14px;color:var(--acc)}
 .chip .cp.hid{visibility:hidden}
 .ntitle{font-size:12px;color:var(--mute);margin:18px 0 6px;text-transform:uppercase;letter-spacing:.05em}
+.seg{display:flex;gap:6px;margin-bottom:10px}
+.seg button{flex:1;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:10px;font:inherit;font-weight:600}
+.seg button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.card .big.b2{font-size:clamp(40px,15vw,80px)}.card .big.b3{font-size:clamp(28px,10vw,54px)}
+#theory details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px 14px;margin-bottom:10px}
+#theory summary{font-weight:700;padding:10px 0;cursor:pointer}
+#theory h3{margin:14px 0 6px;font-size:15px}
+#theory p,#theory li{font-size:15px}
+#theory blockquote{margin:8px 0;padding:6px 12px;border-left:3px solid var(--acc);background:var(--chip);border-radius:0 8px 8px 0}
+#theory code{background:var(--chip);padding:1px 5px;border-radius:5px}
+.tw{overflow-x:auto;margin:8px 0}
+#theory table{border-collapse:collapse;font-size:14px;min-width:100%}
+#theory th,#theory td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+#theory th{background:var(--chip)}
 h3{margin:18px 0 6px;font-size:15px}
 </style>
 </head>
@@ -73,11 +87,13 @@ h3{margin:18px 0 6px;font-size:15px}
   <button class="tab on" data-v="study">Học</button>
   <button class="tab" data-v="quiz">Kiểm tra</button>
   <button class="tab" data-v="nhom">Nhóm</button>
+  <button class="tab" data-v="theory">Lý thuyết</button>
   <button class="tab" data-v="list">Danh sách</button>
   <button class="tab" data-v="load">Nạp</button>
 </header>
 <main>
   <section id="study" class="view on">
+    <div class="seg"><button data-k="word">Học từ</button><button data-k="sen">Học câu</button><button data-k="all">Cả hai</button></div>
     <div class="bar">
       <select id="grp"></select>
       <select id="mode">
@@ -96,6 +112,7 @@ h3{margin:18px 0 6px;font-size:15px}
   </section>
 
   <section id="quiz" class="view">
+    <div class="seg"><button data-k="word">Học từ</button><button data-k="sen">Học câu</button><button data-k="all">Cả hai</button></div>
     <div class="bar"><select id="qgrp"></select><select id="qmode">
       <option value="mix">Trộn lẫn</option>
       <option value="h2p">Chữ → gõ pinyin</option>
@@ -119,6 +136,12 @@ h3{margin:18px 0 6px;font-size:15px}
       <label class="chk"><input type="checkbox" id="nknown"> Chỉ thẻ đã thuộc</label>
     </div>
     <div id="ngrid"></div>
+  </section>
+
+  <section id="theory" class="view">
+    <div id="tbody"></div>
+    <h3>Ghi chú của tôi</h3>
+    <textarea id="mynotes" placeholder="Ghi chú riêng (lưu trên thiết bị này)…" style="height:140px;font-family:inherit;font-size:15px"></textarea>
   </section>
 
   <section id="list" class="view">
@@ -216,7 +239,7 @@ function parse(text,deckName){
 /* ---------- state ---------- */
 let decks=jget('cc.decks',{});         // name -> text
 let prog=jget('cc.prog',{});           // id -> box 0..4
-let set=jget('cc.set',{grp:'',mode:'h2m',onlyNew:true,shuf:true});
+let set=Object.assign({grp:'',mode:'h2m',onlyNew:true,shuf:true,kind:'word'},jget('cc.set',{}));
 let cards=[], queue=[], pos=0, flipped=false, sess={ok:0,bad:0};
 const MASTER=3;
 
@@ -233,15 +256,19 @@ function rebuild(){
   $('#grp').value=set.grp; $('#mode').value=set.mode; $('#onlyNew').checked=set.onlyNew; $('#shuf').checked=set.shuf;
   $('#qgrp').innerHTML=$('#grp').innerHTML; $('#qgrp').value=set.grp;
   {const prev=$('#ngrp').value;$('#ngrp').innerHTML=$('#grp').innerHTML;$('#ngrp').value=[...$('#ngrp').options].some(o=>o.value===prev)?prev:'';}
-  renderDecks(); renderList(); buildQueue(); qReset(); renderNhom();
+  syncSeg(); renderDecks(); renderList(); buildQueue(); qReset(); renderNhom();
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const box=c=>prog[c.id]||0;
+const kindOf=c=>[...c.front.replace(/[(（].*?[)）]/g,'').trim()].length>=3?'sen':'word';   // 3 ký tự trở lên = câu
+const scopeFn=(g,k)=>{const f=inGrp(g);return c=>f(c)&&(k==='all'||kindOf(c)===k)};
+const bc=t=>{const n=[...t].length;return n<=2?'':n<=4?' b2':' b3'};
+function syncSeg(){document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on',b.dataset.k===set.kind))}
 let lessons=[];   // các bài theo thứ tự xuất hiện; bài cuối = bài mới nhất
 const inGrp=g=>c=>!g||(g==='@new'?c.group===lessons[lessons.length-1]:g==='@old'?c.group!==lessons[lessons.length-1]:c.group===g);
 
 function buildQueue(){
-  let q=cards.filter(inGrp(set.grp));
+  let q=cards.filter(scopeFn(set.grp,set.kind));
   if(set.mode==='p2h')q=q.filter(c=>c.py);
   const total=q.length, known=q.filter(c=>box(c)>=MASTER).length;
   if(set.onlyNew)q=q.filter(c=>box(c)<MASTER);
@@ -264,12 +291,12 @@ function renderCard(){
   const c=queue[pos]; $('#cnt').textContent=`${pos+1} / ${queue.length}`;
   const mode=set.mode, note=c.note.length?`<div class="note">${esc(c.note.join(' · '))}</div>`:'';
   let front,back;
-  if(mode==='h2m'){front=`<div class="big">${esc(c.front)}</div>`;
-    back=`<div class="big">${esc(c.front)}</div><div class="py">${esc(c.py)}</div><div class="mid">${esc(c.mean)}</div>${note}`}
+  if(mode==='h2m'){front=`<div class="big${bc(c.front)}">${esc(c.front)}</div>`;
+    back=`<div class="big${bc(c.front)}">${esc(c.front)}</div><div class="py">${esc(c.py)}</div><div class="mid">${esc(c.mean)}</div>${note}`}
   else if(mode==='m2h'){front=`<div class="mid">${esc(c.mean||c.py)}</div>`;
-    back=`<div class="big">${esc(c.front)}</div><div class="py">${esc(c.py)}</div>${note}`}
+    back=`<div class="big${bc(c.front)}">${esc(c.front)}</div><div class="py">${esc(c.py)}</div>${note}`}
   else{front=`<div class="py" style="font-size:clamp(34px,12vw,56px);margin:0">${esc(c.py)}</div>`;
-    back=`<div class="big">${esc(c.front)}</div><div class="mid">${esc(c.mean)}</div>${note}`}
+    back=`<div class="big${bc(c.front)}">${esc(c.front)}</div><div class="mid">${esc(c.mean)}</div>${note}`}
   $('#stage').innerHTML=`<div class="card" id="card">${flipped?back:front}<div class="hint">${flipped?'':'Chạm để lật'}</div></div>
     <div class="row"><button class="btn alt" id="spk" title="Đọc">🔊</button><button class="btn alt" id="gt" title="Nghe trên Google Dịch (cần mạng)">🌐</button><button class="btn bad" id="bad">Chưa nhớ</button><button class="btn ok" id="ok">Nhớ rồi</button></div>
     <div class="hint" style="text-align:center;font-size:12px;color:var(--mute);margin-top:8px">Vuốt trái = chưa nhớ · vuốt phải = nhớ</div>`;
@@ -290,7 +317,7 @@ function answer(ok){
   ok?sess.ok++:sess.bad++;
   if(!ok&&set.onlyNew)queue.push(c);   // thẻ chưa nhớ quay lại cuối lượt
   pos++;flipped=false;
-  const q=cards.filter(inGrp(set.grp)), known=q.filter(x=>box(x)>=MASTER).length;
+  const q=cards.filter(scopeFn(set.grp,set.kind)), known=q.filter(x=>box(x)>=MASTER).length;
   $('#bar').style.width=(q.length?known/q.length*100:0)+'%';$('#stat').textContent=`Thuộc ${known}/${q.length}`;
   renderCard();renderList();
 }
@@ -350,7 +377,9 @@ function addDeck(name,text){
   decks[name]=text;jset('cc.decks',decks);return true;
 }
 async function addFiles(files){
-  let ok=false;for(const f of files){ok=addDeck(f.name,await f.text())||ok}
+  let ok=false;for(const f of files){
+    if(/^(notes|ly[-_ ]?thuyet)/i.test(f.name)){notes=await f.text();jset('cc.notes',notes);renderTheory();show('theory');return}
+    ok=addDeck(f.name,await f.text())||ok}
   if(ok){rebuild();show('study')}
 }
 $('#file').onchange=e=>{addFiles([...e.target.files]);e.target.value=''};
@@ -389,7 +418,8 @@ function checkAnswer(c,mode,raw){
   if(mode==='h2m'){
     const u=fold(a); if(!u)return{ok:false};
     const segs=c.mean.replace(/[(（][^)）]*[)）]/g,' ').split(/[,;\/、]/).map(fold).filter(Boolean);
-    return{ok:segs.some(x=>x===u||(x.length>=3&&u.includes(x))||(u.length>=3&&x.includes(u)))};
+    const mw=segs.join(' ').split(' '), uw=new Set(u.split(' '));
+    return{ok:segs.some(x=>x===u||(x.length>=3&&u.includes(x))||(u.length>=3&&x.includes(u)))||mw.filter(w=>uw.has(w)).length/mw.length>=.7};
   }
   const toks=c.front.split(/[()（）\s\/、,]+/).filter(Boolean), v=a.replace(/\s+/g,'').replace(/[()（）]/g,'');
   return{ok:toks.includes(v)||c.front.replace(/[\s()（）]/g,'')===v};
@@ -400,7 +430,7 @@ function qReset(){Q=null;$('#qstage').innerHTML=cards.length?'':'<div class="emp
 function qStart(list){
   if(!list){
     const mode=$('#qmode').value, g=$('#qgrp').value, n=+$('#qn').value;
-    let pool=cards.filter(inGrp(g));
+    let pool=cards.filter(scopeFn(g,set.kind));
     pool=pool.filter(c=>mode==='mix'?qModes(c).length:qModes(c).includes(mode));
     for(let i=pool.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[pool[i],pool[j]]=[pool[j],pool[i]]}
     if(n)pool=pool.slice(0,n);
@@ -420,8 +450,8 @@ function qRender(){
     $('#qnew').onclick=()=>qStart();
     return}
   const {c,m}=Q.list[Q.i], r=Q.res;
-  const P={h2p:['Gõ pinyin của chữ','<div class="big">'+esc(c.front)+'</div>','pinyin, vd: ren2 hoặc rén'],
-    h2m:['Nghĩa của chữ này là gì?','<div class="big">'+esc(c.front)+'</div>','gõ nghĩa'],
+  const P={h2p:['Gõ pinyin của chữ','<div class="big'+bc(c.front)+'">'+esc(c.front)+'</div>','pinyin, vd: ren2 hoặc rén'],
+    h2m:['Nghĩa của chữ này là gì?','<div class="big'+bc(c.front)+'">'+esc(c.front)+'</div>','gõ nghĩa'],
     m2h:['Gõ chữ Hán có nghĩa','<div class="mid">'+esc(c.mean)+'</div>','gõ chữ Hán'],
     p2h:['Gõ chữ Hán có pinyin','<div class="py" style="margin:0;font-size:clamp(34px,12vw,56px)">'+esc(c.py)+'</div>','gõ chữ Hán']}[m];
   const fb=r?`<div class="fb ${r.ok?'ok':'bad'}"><b>${r.ok?'✓ Đúng':'✗ Sai'}</b>${r.near?'<br>'+r.near:''}<br><span class="h">${esc(c.front)}</span> ${esc(c.py)} — ${esc(c.mean)}</div>`:'';
@@ -501,6 +531,35 @@ $('#ngrid').addEventListener('click',e=>{
 });
 ['#nmode','#ngrp','#nhide','#nknown'].forEach(s=>$(s).onchange=renderNhom);
 
+/* ---------- lý thuyết ---------- */
+let notes=jget('cc.notes','');
+const inl=t=>esc(t).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+function md2html(text){
+  const L=text.replace(/\r/g,'').split('\n'); let out='',open=false,i=0;
+  const cellsOf=l=>l.trim().replace(/^\||\|$/g,'').split('|').map(x=>x.trim());
+  while(i<L.length){
+    const l=L[i], t=l.trim();
+    if(!t){i++;continue}
+    let m;
+    if(/^#\s/.test(t)){i++;continue}
+    if((m=t.match(/^##\s+(.+)/))){if(open)out+='</details>';out+=`<details${out?'':' open'}><summary>${inl(m[1])}</summary>`;open=true;i++;continue}
+    if((m=t.match(/^###\s+(.+)/))){out+=`<h3>${inl(m[1])}</h3>`;i++;continue}
+    if(t.startsWith('|')){
+      const rows=[];while(i<L.length&&L[i].trim().startsWith('|')){rows.push(L[i]);i++}
+      const head=cellsOf(rows[0]), body=rows.slice(2).map(cellsOf);
+      out+='<div class="tw"><table><tr>'+head.map(h=>`<th>${inl(h)}</th>`).join('')+'</tr>'+body.map(r=>'<tr>'+r.map(c=>`<td>${inl(c)}</td>`).join('')+'</tr>').join('')+'</table></div>';continue}
+    if(t.startsWith('>')){let q='';while(i<L.length&&L[i].trim().startsWith('>')){q+=L[i].trim().replace(/^>\s?/,'')+' ';i++}out+=`<blockquote>${inl(q.trim())}</blockquote>`;continue}
+    if(/^[-*]\s/.test(t)){out+='<ul>';while(i<L.length&&/^[-*]\s/.test(L[i].trim())){out+=`<li>${inl(L[i].trim().replace(/^[-*]\s+/,''))}</li>`;i++}out+='</ul>';continue}
+    out+=`<p>${inl(t)}</p>`;i++;
+  }
+  return out+(open?'</details>':'');
+}
+function renderTheory(){
+  $('#tbody').innerHTML=notes?md2html(notes):'<div class="empty">Chưa có nội dung lý thuyết.<br>Khi mở bằng link web, trang tự tải <b>notes.md</b>; hoặc chọn file notes.md ở tab <b>Nạp</b>.</div>';
+}
+$('#mynotes').value=jget('cc.mynotes','');
+$('#mynotes').oninput=e=>jset('cc.mynotes',e.target.value);
+
 /* ---------- ui ---------- */
 function show(v){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id===v));document.querySelectorAll('.tab[data-v]').forEach(x=>x.classList.toggle('on',x.dataset.v===v))}
 document.querySelectorAll('.tab[data-v]').forEach(b=>b.onclick=()=>show(b.dataset.v));
@@ -509,17 +568,21 @@ $('#mode').onchange=e=>{set.mode=e.target.value;jset('cc.set',set);buildQueue()}
 $('#onlyNew').onchange=e=>{set.onlyNew=e.target.checked;jset('cc.set',set);buildQueue()};
 $('#shuf').onchange=e=>{set.shuf=e.target.checked;jset('cc.set',set);buildQueue()};
 $('#q').oninput=renderList;
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{set.kind=b.dataset.k;jset('cc.set',set);syncSeg();buildQueue();qReset()});
 document.addEventListener('keydown',e=>{
   if(!$('#study').classList.contains('on')||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
   if(e.key===' '||e.key==='Enter'){e.preventDefault();$('#card')?.click()}
   else if(e.key==='ArrowRight')answer(true);else if(e.key==='ArrowLeft')answer(false);
 });
 
+renderTheory();
 rebuild();
 // Khi host cạnh file deck.md: mỗi lần mở trang tự đồng bộ bản mới nhất (tiến độ đã thuộc được giữ nguyên)
 if(location.protocol.startsWith('http')){
   fetch('deck.md?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():Promise.reject()).then(t=>{
     if(decks['deck.md']!==t&&addDeck('deck.md',t))rebuild()}).catch(()=>{});
+  fetch('notes.md?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():Promise.reject()).then(t=>{
+    if(t!==notes){notes=t;jset('cc.notes',t);renderTheory()}}).catch(()=>{});
 }
 </script>
 </body>
